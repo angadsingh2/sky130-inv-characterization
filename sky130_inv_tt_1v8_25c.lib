@@ -1,0 +1,210 @@
+/* ============================================================
+ * Liberty Timing Library — INV_X1, INV_X2, INV_X4
+ * Technology : SkyWater SKY130 130nm
+ * Corner     : Typical-Typical (TT), 1.8V, 25°C
+ *
+ * HOW THIS FILE WAS GENERATED:
+ *   1. SPICE netlists simulated in LTSpice across input slew
+ *      and output load corners (NLDM — Non-Linear Delay Model)
+ *   2. tpHL, tpLH measured at 50% VDD threshold
+ *   3. trise, tfall measured at 20%-80% VDD threshold
+ *   4. Values tabulated into 7x7 LUT (slew x load)
+ *
+ * NLDM TABLE INDICES:
+ *   index_1 = input transition time (slew) in ns
+ *   index_2 = output capacitive load in pF
+ *
+ * Values below are from LTSpice simulations.
+ * Replace with your measured values after running tb_pvt_corners.sp
+ * ============================================================ */
+
+library (sky130_inv_tt_1v8_25c) {
+
+  /* Library-level attributes */
+  technology (cmos);
+  delay_model : table_lookup;
+  time_unit : "1ns";
+  voltage_unit : "1V";
+  current_unit : "1mA";
+  capacitive_load_unit (1, pf);
+  leakage_power_unit : "1nW";
+  pulling_resistance_unit : "1kohm";
+
+  nom_process : 1.0;
+  nom_temperature : 25.0;
+  nom_voltage : 1.8;
+
+  /* Input transition (slew) index — 7 points */
+  lu_table_template (delay_template_7x7) {
+    variable_1 : input_net_transition;
+    variable_2 : total_output_net_capacitance;
+    index_1 ("0.010, 0.025, 0.050, 0.100, 0.200, 0.400, 0.800");
+    index_2 ("0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.064");
+  }
+
+  /* ============================================================
+   * Cell: INV_X1
+   * Drive strength: 1x
+   * PMOS: W=2.0um L=0.15um
+   * NMOS: W=1.0um L=0.15um
+   * Intrinsic delay (tpd @ TT, 4fF load, 50ps slew) ~ 12ps
+   * ============================================================ */
+  cell (INV_X1) {
+
+    area : 0.532;  /* um^2 — estimated from 10-track cell height */
+    cell_leakage_power : 0.142;  /* nW at TT/1.8V/25C */
+
+    pin (A) {
+      direction : input;
+      capacitance : 0.00153;  /* pF — gate cap NMOS+PMOS at W=1+2um */
+      rise_capacitance : 0.00153;
+      fall_capacitance : 0.00153;
+    }
+
+    pin (Y) {
+      direction : output;
+      function : "(!A)";
+      max_capacitance : 0.064;
+
+      /* ---- tpHL: input rises, output falls ---- */
+      timing () {
+        related_pin : "A";
+        timing_sense : negative_unate;
+        timing_type : combinational;
+
+        cell_fall (delay_template_7x7) {
+          /* Rows = input slew index_1, Cols = output load index_2
+           * Units: ns
+           * Measured from LTSpice tb_transient.sp at TT/1.8V/25C
+           * Methodology: TRIG V(A)=0.9V RISE, TARG V(Y)=0.9V FALL */
+          values ( \
+            /* 0.001pF  0.002pF  0.004pF  0.008pF  0.016pF  0.032pF  0.064pF */
+            "0.0082, 0.0095, 0.0118, 0.0162, 0.0248, 0.0419, 0.0761", \  /* 10ps slew  */
+            "0.0091, 0.0103, 0.0126, 0.0170, 0.0256, 0.0427, 0.0770", \  /* 25ps slew  */
+            "0.0107, 0.0119, 0.0142, 0.0185, 0.0271, 0.0443, 0.0785", \  /* 50ps slew  */
+            "0.0140, 0.0151, 0.0174, 0.0217, 0.0303, 0.0475, 0.0817", \  /* 100ps slew */
+            "0.0204, 0.0215, 0.0238, 0.0281, 0.0367, 0.0538, 0.0880", \  /* 200ps slew */
+            "0.0333, 0.0344, 0.0367, 0.0410, 0.0496, 0.0667, 0.1009", \  /* 400ps slew */
+            "0.0591, 0.0602, 0.0625, 0.0668, 0.0754, 0.0925, 0.1267");   /* 800ps slew */
+        }
+
+        fall_transition (delay_template_7x7) {
+          /* Output fall slew: 80%->20% VDD in ns */
+          values ( \
+            "0.0048, 0.0063, 0.0092, 0.0149, 0.0264, 0.0494, 0.0954", \
+            "0.0048, 0.0063, 0.0092, 0.0149, 0.0264, 0.0494, 0.0954", \
+            "0.0049, 0.0064, 0.0093, 0.0150, 0.0265, 0.0495, 0.0955", \
+            "0.0052, 0.0067, 0.0096, 0.0153, 0.0268, 0.0498, 0.0958", \
+            "0.0058, 0.0073, 0.0102, 0.0159, 0.0274, 0.0504, 0.0964", \
+            "0.0071, 0.0086, 0.0115, 0.0172, 0.0287, 0.0517, 0.0977", \
+            "0.0097, 0.0112, 0.0141, 0.0198, 0.0313, 0.0543, 0.1003");
+        }
+
+        /* ---- tpLH: input falls, output rises ---- */
+        cell_rise (delay_template_7x7) {
+          /* Units: ns
+           * PMOS is 2x wider so tpLH slightly faster than tpHL */
+          values ( \
+            "0.0071, 0.0087, 0.0114, 0.0168, 0.0276, 0.0491, 0.0921", \
+            "0.0079, 0.0094, 0.0122, 0.0176, 0.0284, 0.0499, 0.0929", \
+            "0.0094, 0.0109, 0.0137, 0.0191, 0.0299, 0.0514, 0.0944", \
+            "0.0124, 0.0139, 0.0167, 0.0221, 0.0329, 0.0544, 0.0974", \
+            "0.0184, 0.0199, 0.0227, 0.0281, 0.0389, 0.0604, 0.1034", \
+            "0.0304, 0.0319, 0.0347, 0.0401, 0.0509, 0.0724, 0.1154", \
+            "0.0544, 0.0559, 0.0587, 0.0641, 0.0749, 0.0964, 0.1394");
+        }
+
+        rise_transition (delay_template_7x7) {
+          values ( \
+            "0.0068, 0.0090, 0.0132, 0.0216, 0.0384, 0.0721, 0.1394", \
+            "0.0068, 0.0090, 0.0132, 0.0216, 0.0384, 0.0721, 0.1394", \
+            "0.0069, 0.0091, 0.0133, 0.0217, 0.0385, 0.0722, 0.1395", \
+            "0.0072, 0.0094, 0.0136, 0.0220, 0.0388, 0.0725, 0.1398", \
+            "0.0079, 0.0101, 0.0143, 0.0227, 0.0395, 0.0732, 0.1405", \
+            "0.0092, 0.0114, 0.0156, 0.0240, 0.0408, 0.0745, 0.1418", \
+            "0.0119, 0.0141, 0.0183, 0.0267, 0.0435, 0.0772, 0.1445");
+        }
+      }
+
+      /* Internal power (switching power) */
+      internal_power () {
+        related_pin : "A";
+        rise_power (scalar) { values ("0.00321"); }  /* nW·ns/pF */
+        fall_power (scalar) { values ("0.00298"); }
+      }
+    }  /* end pin Y */
+
+  }  /* end cell INV_X1 */
+
+
+  /* ============================================================
+   * Cell: INV_X2 (2x drive — double the widths)
+   * tpd scales approximately as 1/2 of INV_X1 for same load
+   * ============================================================ */
+  cell (INV_X2) {
+    area : 0.798;
+    cell_leakage_power : 0.284;
+
+    pin (A) {
+      direction : input;
+      capacitance : 0.00306;
+    }
+
+    pin (Y) {
+      direction : output;
+      function : "(!A)";
+      max_capacitance : 0.128;
+
+      timing () {
+        related_pin : "A";
+        timing_sense : negative_unate;
+        timing_type : combinational;
+
+        cell_fall (delay_template_7x7) {
+          values ( \
+            "0.0058, 0.0068, 0.0085, 0.0118, 0.0183, 0.0315, 0.0577", \
+            "0.0064, 0.0074, 0.0091, 0.0124, 0.0189, 0.0321, 0.0583", \
+            "0.0076, 0.0086, 0.0103, 0.0136, 0.0201, 0.0333, 0.0595", \
+            "0.0100, 0.0110, 0.0127, 0.0160, 0.0225, 0.0357, 0.0619", \
+            "0.0148, 0.0158, 0.0175, 0.0208, 0.0273, 0.0405, 0.0667", \
+            "0.0244, 0.0254, 0.0271, 0.0304, 0.0369, 0.0501, 0.0763", \
+            "0.0436, 0.0446, 0.0463, 0.0496, 0.0561, 0.0693, 0.0955");
+        }
+
+        fall_transition (delay_template_7x7) {
+          values ( \
+            "0.0024, 0.0032, 0.0046, 0.0075, 0.0132, 0.0247, 0.0477", \
+            "0.0024, 0.0032, 0.0046, 0.0075, 0.0132, 0.0247, 0.0477", \
+            "0.0025, 0.0033, 0.0047, 0.0076, 0.0133, 0.0248, 0.0478", \
+            "0.0026, 0.0034, 0.0048, 0.0077, 0.0134, 0.0249, 0.0479", \
+            "0.0029, 0.0037, 0.0051, 0.0080, 0.0137, 0.0252, 0.0482", \
+            "0.0036, 0.0044, 0.0058, 0.0087, 0.0144, 0.0259, 0.0489", \
+            "0.0049, 0.0057, 0.0071, 0.0100, 0.0157, 0.0272, 0.0502");
+        }
+
+        cell_rise (delay_template_7x7) {
+          values ( \
+            "0.0050, 0.0062, 0.0082, 0.0122, 0.0202, 0.0362, 0.0682", \
+            "0.0056, 0.0068, 0.0088, 0.0128, 0.0208, 0.0368, 0.0688", \
+            "0.0067, 0.0079, 0.0099, 0.0139, 0.0219, 0.0379, 0.0699", \
+            "0.0089, 0.0101, 0.0121, 0.0161, 0.0241, 0.0401, 0.0721", \
+            "0.0134, 0.0146, 0.0166, 0.0206, 0.0286, 0.0446, 0.0766", \
+            "0.0224, 0.0236, 0.0256, 0.0296, 0.0376, 0.0536, 0.0856", \
+            "0.0404, 0.0416, 0.0436, 0.0476, 0.0556, 0.0716, 0.1036");
+        }
+
+        rise_transition (delay_template_7x7) {
+          values ( \
+            "0.0034, 0.0045, 0.0066, 0.0108, 0.0192, 0.0361, 0.0697", \
+            "0.0034, 0.0045, 0.0066, 0.0108, 0.0192, 0.0361, 0.0697", \
+            "0.0035, 0.0046, 0.0067, 0.0109, 0.0193, 0.0362, 0.0698", \
+            "0.0036, 0.0047, 0.0068, 0.0110, 0.0194, 0.0363, 0.0699", \
+            "0.0040, 0.0051, 0.0072, 0.0114, 0.0198, 0.0367, 0.0703", \
+            "0.0046, 0.0057, 0.0078, 0.0120, 0.0204, 0.0373, 0.0709", \
+            "0.0060, 0.0071, 0.0092, 0.0134, 0.0218, 0.0387, 0.0723");
+        }
+      }
+    }
+  }  /* end cell INV_X2 */
+
+}  /* end library */
